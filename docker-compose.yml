@@ -1,5 +1,11 @@
 version: "3.9"
-   
+
+networks:
+  backend-net:
+    driver: bridge
+  frontend-net:
+    driver: bridge
+
 services:
   db:
     image: postgres
@@ -9,6 +15,8 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    networks:
+      - backend-net  
   server:
     build: ./django
     command: python manage.py runserver 0.0.0.0:8000
@@ -18,7 +26,25 @@ services:
       - "8000:8000"
     depends_on:
       - db
+    networks:
+      - frontend-net
+      - backend-net
   web:
     build: ./vue
+    networks:
+      - frontend-net
+  nginx:
+    image: nginx:1.17
+    build:
+      context: .
+      dockerfile: ./config/nginx/dockerfile
     ports:
-      - "8080:8080"
+      - 80:80
+    volumes:
+      - ./config/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - web
+      - db
+      - server
+    networks:
+      - frontend-net
